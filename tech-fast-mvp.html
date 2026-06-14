@@ -386,21 +386,37 @@
       };
 
       const lines = text.split('\n');
+      let foundTotal = false;
 
-      for (let line of lines) {
-        line = line.trim();
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
 
-        if (/screen time|total|^\d+h\s*\d+m/i.test(line)) {
-          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?/i);
-          if (match && !stats.total) {
-            stats.total = `${match[1]}h ${match[2]}m`;
+        // Look for total screen time (usually at the top, standalone number)
+        if (!foundTotal && /^\d+\s*[hm]/.test(line)) {
+          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|(\d+)\s*h(?:ours?)?|(\d+)\s*m(?:in(?:utes?)?)?/i);
+          if (match) {
+            if (match[1] && match[2]) {
+              stats.total = `${match[1]}h ${match[2]}m`;
+            } else if (match[3]) {
+              stats.total = `${match[3]}h`;
+            } else if (match[4]) {
+              stats.total = `${match[4]}m`;
+            }
+            foundTotal = true;
           }
         }
 
-        if (/(social|instagram|facebook|tiktok|twitter|reddit|snapchat)/i.test(line)) {
-          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?/i);
+        // Look for social media time
+        if (/social/i.test(line)) {
+          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|(\d+)\s*h(?:ours?)?|(\d+)\s*m(?:in(?:utes?)?)?/i);
           if (match) {
-            stats.social = `${match[1]}h ${match[2]}m`;
+            if (match[1] && match[2]) {
+              stats.social = `${match[1]}h ${match[2]}m`;
+            } else if (match[3]) {
+              stats.social = `${match[3]}h`;
+            } else if (match[4]) {
+              stats.social = `${match[4]}m`;
+            }
           }
         }
 
