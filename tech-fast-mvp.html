@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech Fast Stat Card</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+
+    .upload-section {
+      margin-bottom: 30px;
+    }
+
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+    }
+
+    .upload-area:hover {
+      border-color: #667eea;
+      background: #f5f7ff;
+    }
+
+    .upload-area.dragging {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .upload-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .upload-text {
+      color: #666;
+      font-size: 14px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .progress {
+      display: none;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #f0f4ff;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .progress.active {
+      display: block;
+    }
+
+    .progress-text {
+      font-size: 14px;
+      color: #667eea;
+    }
+
+    .extracted-data {
+      display: none;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .extracted-data.active {
+      display: block;
+    }
+
+    .data-item {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .data-label {
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-value {
+      color: #1a1a1a;
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .card-preview {
+      display: none;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-preview.active {
+      display: block;
+    }
+
+    #statCard {
+      width: 100%;
+      display: block;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f4ff;
+      color: #667eea;
+      border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      background: #e8edff;
+    }
+
+    .manual-entry {
+      display: none;
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #eee;
+    }
+
+    .manual-entry.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: #1a1a1a;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .error {
+      color: #d32f2f;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tech Fast Stat Card</h1>
+    <p class="subtitle">Extract stats from Samsung screenshots & generate shareable cards</p>
+
+    <div class="upload-section">
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📸</div>
+        <p class="upload-text">Click to upload or drag & drop<br><small>PNG, JPG supported</small></p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="progress" id="progress">
+      <p class="progress-text">🔍 Extracting text from image...</p>
+    </div>
+
+    <div class="extracted-data" id="extractedData">
+      <div class="data-item">
+        <div class="data-label">Total Screen Time</div>
+        <div class="data-value" id="totalTime">—</div>
+      </div>
+      <div class="data-item">
+        <div class="data-label">Social Media Time</div>
+        <div class="data-value" id="socialTime">—</div>
+      </div>
+      <div class="data-item">
+        <div class="data-label">Week</div>
+        <div class="data-value" id="weekInfo">—</div>
+      </div>
+      <div id="extractError" class="error"></div>
+    </div>
+
+    <div class="card-preview" id="cardPreview">
+      <canvas id="statCard" width="400" height="300"></canvas>
+    </div>
+
+    <div class="actions" id="actions" style="display: none;">
+      <button class="btn-secondary" id="downloadBtn">📥 Download Card</button>
+      <button class="btn-primary" id="shareBtn">📤 Copy Link</button>
+    </div>
+
+    <div class="manual-entry" id="manualEntry">
+      <h2 style="font-size: 16px; margin-bottom: 16px;">Or enter data manually</h2>
+      <div class="form-group">
+        <label>Total Screen Time (e.g., "8h 24m")</label>
+        <input type="text" id="manualTotal" placeholder="e.g., 8h 24m">
+      </div>
+      <div class="form-group">
+        <label>Social Media Time (e.g., "2h 15m")</label>
+        <input type="text" id="manualSocial" placeholder="e.g., 2h 15m">
+      </div>
+      <div class="form-group">
+        <label>Week Number (optional)</label>
+        <input type="number" id="manualWeek" placeholder="e.g., 47">
+      </div>
+      <button class="btn-primary" onclick="generateCardFromManual()" style="width: 100%;">Generate Card</button>
+    </div>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const progress = document.getElementById('progress');
+    const extractedData = document.getElementById('extractedData');
+    const cardPreview = document.getElementById('cardPreview');
+    const actions = document.getElementById('actions');
+    const manualEntry = document.getElementById('manualEntry');
+    const canvas = document.getElementById('statCard');
+    const ctx = canvas.getContext('2d');
+
+    let currentStats = null;
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragging');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragging');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragging');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file) {
+      if (!file) return;
+
+      progress.classList.add('active');
+      extractedData.classList.remove('active');
+      cardPreview.classList.remove('active');
+      actions.style.display = 'none';
+      manualEntry.classList.remove('active');
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const image = e.target.result;
+          await extractStats(image);
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        progress.classList.remove('active');
+        showError('Failed to read file: ' + error.message);
+      }
+    }
+
+    async function extractStats(imageData) {
+      try {
+        const { data: { text } } = await Tesseract.recognize(
+          imageData,
+          'eng',
+          { logger: m => console.log('OCR:', m) }
+        );
+
+        const stats = parseStats(text);
+        currentStats = stats;
+
+        progress.classList.remove('active');
+
+        if (stats.total && stats.social) {
+          displayExtractedData(stats);
+          generateCard(stats);
+          extractedData.classList.add('active');
+          cardPreview.classList.add('active');
+          actions.style.display = 'flex';
+        } else {
+          showError('Could not extract screen time data. Try manual entry below.');
+          manualEntry.classList.add('active');
+        }
+      } catch (error) {
+        progress.classList.remove('active');
+        showError('OCR failed: ' + error.message);
+        manualEntry.classList.add('active');
+      }
+    }
+
+    function parseStats(text) {
+      console.log('OCR Text:', text);
+
+      const stats = {
+        total: null,
+        social: null,
+        week: null
+      };
+
+      const lines = text.split('\n');
+
+      for (let line of lines) {
+        line = line.trim();
+
+        if (/screen time|total|^\d+h\s*\d+m/i.test(line)) {
+          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?/i);
+          if (match && !stats.total) {
+            stats.total = `${match[1]}h ${match[2]}m`;
+          }
+        }
+
+        if (/(social|instagram|facebook|tiktok|twitter|reddit|snapchat)/i.test(line)) {
+          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?/i);
+          if (match) {
+            stats.social = `${match[1]}h ${match[2]}m`;
+          }
+        }
+
+        if (/week|wk/i.test(line)) {
+          const match = line.match(/(\d+)/);
+          if (match) {
+            stats.week = match[1];
+          }
+        }
+      }
+
+      return stats;
+    }
+
+    function displayExtractedData(stats) {
+      document.getElementById('totalTime').textContent = stats.total || '—';
+      document.getElementById('socialTime').textContent = stats.social || '—';
+      document.getElementById('weekInfo').textContent = stats.week ? `Week ${stats.week}` : '—';
+      document.getElementById('extractError').textContent = '';
+    }
+
+    function generateCard(stats) {
+      const width = canvas.width;
+      const height = canvas.height;
+
+      ctx.fillStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#667eea');
+      gradient.addColorStop(1, '#764ba2');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Week ' + (stats.week || '?') + ': Reclaimed', width / 2, 60);
+
+      ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(stats.total || '?', width / 2, 130);
+
+      ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillText('(vs last week)', width / 2, 165);
+
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      const lines = ['That\'s 1 movie +', 'lunch with a friend'];
+      lines.forEach((line, i) => {
+        ctx.fillText(line, width / 2, 220 + (i * 25));
+      });
+
+      setupActionButtons(stats);
+    }
+
+    function generateCardFromManual() {
+      const total = document.getElementById('manualTotal').value.trim();
+      const social = document.getElementById('manualSocial').value.trim();
+      const week = document.getElementById('manualWeek').value.trim();
+
+      if (!total) {
+        alert('Please enter total screen time');
+        return;
+      }
+
+      currentStats = {
+        total: total,
+        social: social || null,
+        week: week || null
+      };
+
+      displayExtractedData(currentStats);
+      generateCard(currentStats);
+      extractedData.classList.add('active');
+      cardPreview.classList.add('active');
+      actions.style.display = 'flex';
+    }
+
+    function setupActionButtons(stats) {
+      document.getElementById('downloadBtn').onclick = downloadCard;
+      document.getElementById('shareBtn').onclick = () => shareCard(stats);
+    }
+
+    function downloadCard() {
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `tech-fast-week-${currentStats.week || 'stat'}.png`;
+      link.click();
+    }
+
+    function shareCard(stats) {
+      const text = `Week ${stats.week || '?'}: Reclaimed ${stats.total}! 📱➡️😌`;
+      if (navigator.share) {
+        navigator.share({
+          title: 'Tech Fast Stat',
+          text: text,
+          files: [new File([canvas.toBlob(() => {})], 'stat.png', { type: 'image/png' })]
+        });
+      } else {
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard: ' + text);
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('extractError').textContent = message;
+      extractedData.classList.add('active');
+      manualEntry.classList.add('active');
+    }
+  </script>
+</body>
+</html>
