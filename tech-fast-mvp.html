@@ -391,47 +391,38 @@
         week: null
       };
 
-      const lines = text.split('\n');
-      let foundTotal = false;
+      // Extract all time patterns (handles both "50m" and "2h 15m")
+      const timePattern = /(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|(\d+)\s*h(?:ours?)?|(\d+)\s*m(?:in(?:utes?)?)?/gi;
+      let matches = Array.from(text.matchAll(timePattern));
 
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
-
-        // Look for total screen time (usually at the top, standalone number)
-        if (!foundTotal && /^\d+\s*[hm]/.test(line)) {
-          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|(\d+)\s*h(?:ours?)?|(\d+)\s*m(?:in(?:utes?)?)?/i);
-          if (match) {
-            if (match[1] && match[2]) {
-              stats.total = `${match[1]}h ${match[2]}m`;
-            } else if (match[3]) {
-              stats.total = `${match[3]}h`;
-            } else if (match[4]) {
-              stats.total = `${match[4]}m`;
-            }
-            foundTotal = true;
-          }
+      // First time match (typically the largest) is usually total screen time
+      if (matches.length > 0) {
+        const match = matches[0];
+        if (match[1] && match[2]) {
+          stats.total = `${match[1]}h ${match[2]}m`;
+        } else if (match[3]) {
+          stats.total = `${match[3]}h`;
+        } else if (match[4]) {
+          stats.total = `${match[4]}m`;
         }
+      }
 
-        // Look for social media time
-        if (/social/i.test(line)) {
-          const match = line.match(/(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|(\d+)\s*h(?:ours?)?|(\d+)\s*m(?:in(?:utes?)?)?/i);
-          if (match) {
-            if (match[1] && match[2]) {
-              stats.social = `${match[1]}h ${match[2]}m`;
-            } else if (match[3]) {
-              stats.social = `${match[3]}h`;
-            } else if (match[4]) {
-              stats.social = `${match[4]}m`;
-            }
-          }
+      // Look for social media time (appears after "Social" keyword)
+      const socialMatch = text.match(/social\s+(\d+)\s*h(?:ours?)?\s*(\d+)\s*m(?:in(?:utes?)?)?|social\s+(\d+)\s*h(?:ours?)?|social\s+(\d+)\s*m(?:in(?:utes?)?)?/i);
+      if (socialMatch) {
+        if (socialMatch[1] && socialMatch[2]) {
+          stats.social = `${socialMatch[1]}h ${socialMatch[2]}m`;
+        } else if (socialMatch[3]) {
+          stats.social = `${socialMatch[3]}h`;
+        } else if (socialMatch[4]) {
+          stats.social = `${socialMatch[4]}m`;
         }
+      }
 
-        if (/week|wk/i.test(line)) {
-          const match = line.match(/(\d+)/);
-          if (match) {
-            stats.week = match[1];
-          }
-        }
+      // Look for week number
+      const weekMatch = text.match(/week\s+(\d+)/i);
+      if (weekMatch) {
+        stats.week = weekMatch[1];
       }
 
       return stats;
